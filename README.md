@@ -1,78 +1,210 @@
+# Student Academic Portal — JDBC + MySQL
 
-# STUDENT ACADEMIC PORTAL
+## 1. What changed from the previous version?
 
-1. QUICK OVERVIEW
-This is a console-based Student Academic Portal developed in Java.
-It demonstrates core OOP concepts and provides Admin and Student workflows.
+The old `students.dat` file-storage design has been replaced with a MySQL database accessed through JDBC.
 
-2. FEATURES
-- Admin login
-- Student login
-- Add/update/delete/search students
-- View all students
-- Add subjects and marks
-- Automatic grade calculation
-- Semester GPA and overall CGPA
-- Attendance percentage and eligibility
-- File-based persistence using students.dat
-- Input validation and exception handling
+The project now uses:
+- Java 17+
+- MySQL Server 8.x+
+- JDBC
+- MySQL Connector/J 26.7.0
+- Maven
+- PreparedStatement
+- Transactions for academic record saving
+- Foreign keys and cascading student deletion
 
-3. DEFAULT ADMIN LOGIN
-Username: admin
-Password: admin123
+MySQL documents Connector/J as the official JDBC driver for MySQL and publishes it through Maven as `com.mysql:mysql-connector-j`. The current MySQL documentation lists Connector/J 26.7 and its MySQL compatibility information.
 
-4. PROJECT FILES
-Main.java              -> Program entry point
-Person.java            -> Abstract parent class
-Admin.java             -> Admin model / inheritance
-Student.java           -> Student model and academic calculations
-Subject.java           -> Subject model
-AcademicRecord.java    -> Marks, grades and grade points
-Attendance.java        -> Attendance calculations
-StudentManager.java    -> Student collection and CRUD operations
-FileManager.java       -> Save/load data
-AcademicPortal.java    -> Menus, login and application controller
+## 2. Project Structure
 
-5. REQUIREMENTS
-JDK 17 or newer is recommended because the project uses modern switch syntax.
-No external libraries or database are required.
+```text
+Student_Academic_Portal_JDBC/
+├── src/
+│   ├── Main.java
+│   ├── AcademicPortal.java
+│   ├── Person.java
+│   ├── Student.java
+│   ├── Admin.java
+│   ├── Subject.java
+│   ├── AcademicRecord.java
+│   ├── Attendance.java
+│   ├── DBConnection.java
+│   ├── DBConnectionPassword.java
+│   ├── DatabaseInitializer.java
+│   ├── StudentDAO.java
+│   ├── AdminDAO.java
+│   ├── AcademicDAO.java
+│   └── AttendanceDAO.java
+├── database/
+│   └── schema.sql
+├── pom.xml
+├── Student_Academic_Portal_JDBC_Report.docx
+└── README.md
+```
 
-6. RUN FROM TERMINAL
-Open the src folder:
-    cd src
+## 3. Install MySQL
 
-Compile:
-    javac *.java
+Install MySQL Server and make sure the MySQL service is running.
+
+Open MySQL Workbench or MySQL command line and confirm that you can log in using the root account.
+
+## 4. Configure Password
+
+Open:
+
+`src/DBConnection.java`
+
+Change:
+
+```java
+private static final String PASSWORD = "YOUR_MYSQL_PASSWORD";
+```
+
+to your actual MySQL root password.
+
+For a cleaner approach, you can set the environment variable `MYSQL_PASSWORD`. The project includes `DBConnectionPassword.java` for database-initialization access.
+
+## 5. Database Creation
+
+The application automatically executes:
+
+```sql
+CREATE DATABASE IF NOT EXISTS student_academic_portal;
+```
+
+and creates all required tables.
+
+You can also manually execute:
+
+`database/schema.sql`
+
+in MySQL Workbench.
+
+## 6. Tables
+
+### admins
+Stores administrator login/profile data.
+
+### students
+Stores student profile and login data.
+
+### subjects
+Stores subject name and credits.
+
+### academic_records
+Stores marks and semester for each student-subject combination.
+
+### attendance
+Stores total and attended classes for each student and subject.
+
+Foreign keys connect academic and attendance records to students.
+
+## 7. Maven Run
+
+Open a terminal in the project root.
 
 Run:
-    java Main
 
-7. DATA FILE
-When data is saved, students.dat is created in the current working directory.
-The program automatically loads it at startup.
+```bash
+mvn clean compile
+mvn exec:java
+```
 
-8. TEST FLOW
-A. Start program.
-B. Login as admin using admin/admin123.
-C. Add a student.
-D. Add marks for at least 4 subjects.
-E. Add attendance for at least 2 subjects.
-F. Save data.
-G. Logout.
-H. Login as the student.
-I. View profile, results, GPA/CGPA and attendance.
-J. Exit and restart to verify persistence.
+Maven downloads MySQL Connector/J automatically.
 
-9. OOP CONCEPTS FOR VIVA
-- Encapsulation: private fields with getters/setters
-- Abstraction: abstract Person class
-- Inheritance: Student and Admin extend Person
-- Polymorphism: displayDetails() is overridden
-- Constructors: used to initialize objects
-- Collections: ArrayList
-- Exception handling: validation and try/catch
-- File handling: ObjectOutputStream/ObjectInputStream
+## 8. Default Admin
 
-10. IMPORTANT SUBMISSION NOTE
-Replace placeholder team-member names and roll numbers in the report before submission.
-Do not claim MySQL, JDBC, Swing, JavaFX, Spring, or another technology unless you actually add and test it.
+Username:
+`admin`
+
+Password:
+`admin123`
+
+## 9. Typical Demonstration
+
+1. Start MySQL Server.
+2. Run the Maven project.
+3. Login as admin.
+4. Add a student.
+5. Add four subjects and marks.
+6. View the result.
+7. Add attendance.
+8. View attendance.
+9. Logout.
+10. Login as the student.
+11. View profile, result and attendance.
+12. Open MySQL Workbench and show that records exist in the tables.
+13. Update/delete a student and demonstrate the database changes.
+
+## 10. JDBC Concepts to Explain in Viva
+
+- Driver / Connector
+- JDBC connection
+- DriverManager
+- Connection
+- PreparedStatement
+- ResultSet
+- SQL queries
+- Transactions
+- Commit and rollback
+- Foreign keys
+- DAO pattern
+- CRUD operations
+- SQL exceptions
+
+## 11. OOP Concepts
+
+Encapsulation:
+Private fields and public methods.
+
+Abstraction:
+`Person` is an abstract class.
+
+Inheritance:
+`Student` and `Admin` extend `Person`.
+
+Polymorphism:
+`displayDetails()` is overridden.
+
+Composition:
+Academic records contain `Subject` objects.
+
+## 12. Security Note
+
+This is an academic laboratory project. Passwords are stored as plain text to keep the JDBC/OOP implementation easy to understand. A production system should use password hashing, stronger authentication and secrets management.
+
+## 13. Troubleshooting
+
+### Communications link failure
+Make sure MySQL Server is running and the port is 3306.
+
+### Access denied for user 'root'
+Check the MySQL username/password and update `DBConnection.java`.
+
+### Unknown database
+Run the program once; `DatabaseInitializer` creates it automatically. You can also run `database/schema.sql`.
+
+### Maven dependency error
+Check internet access and run:
+
+```bash
+mvn clean compile
+```
+
+### Duplicate student
+The roll number is the primary key.
+
+### Delete student
+Academic and attendance records are configured with `ON DELETE CASCADE`, so dependent records are removed when a student is deleted.
+
+## 15. Submission Checklist
+
+- Fill four team member names and roll numbers.
+- Replace the MySQL password configuration.
+- Run the project on your own computer.
+- Capture screenshots of the working portal.
+- Capture a MySQL Workbench screenshot showing tables/data.
+- Insert screenshots into the Results section.
+- Verify the final report page count.
+- Do not claim features that were not demonstrated.
