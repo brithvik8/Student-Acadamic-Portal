@@ -1,288 +1,259 @@
-# Student Academic Portal (JDBC + MySQL)
+# Student Academic Portal
 
-A Java command-line application for managing student profiles, academic marks and results, and subject attendance using MySQL.
+A console-based academic management application written in Java. It uses Object-Oriented Programming, JDBC, and a MySQL database to manage student records, academic results, and attendance through separate Admin and Student login areas.
 
-## Overview
-
-The portal provides separate administrator and student sign-in flows. Administrators maintain student records and enter academic and attendance data; students can view their own profile, results, and attendance. It is an object-oriented programming and JDBC laboratory project, not a web application.
+> **Note:** This README was written from the project's technical report (class definitions, method signatures, and SQL shown in the documentation), because the source repository itself was not available for direct inspection. Sections that describe confirmed code (classes, methods, SQL, workflow) are accurate to the report. Sections that depend on the actual repo layout (folder structure, build commands, dependency versions, Git URL, license) are marked as **unverified placeholders** — please update them to match your real project before publishing.
 
 ## Features
 
-- Administrator and student login menus.
-- Add, edit, delete, search, and list student records.
-- Add or update marks and view subject grades, average marks, and credit-weighted overall CGPA.
-- Add or update attendance and view attendance percentage/status; 75% is the eligibility threshold.
-- Automatically create/check the configured database and tables at startup, and seed an administrator if its username is absent.
-- JDBC prepared statements for database operations; academic subject and record writes use a transaction.
+### Admin
+- Log in with a username and password, verified against the `admins` table
+- Add, search, update, delete, and view all student records
+- Add or update a student's marks and view calculated results
+- Add or update attendance and view attendance records
+- View own admin profile
 
-## Tech Stack
+### Student
+- Log in with Roll Number and password
+- View personal profile details
+- View academic results (grades, grade points)
+- View subject-wise attendance and eligibility status
+- Log out
 
-| Area | Technology |
+### Academic Records
+- Store subject code, subject name, credits, marks, and semester per student
+- Automatically calculate grade and grade point from marks
+- Compute overall CGPA from subject credits and grade points
+
+### Attendance
+- Track total classes and attended classes per subject
+- Automatically calculate attendance percentage
+- Automatically mark status as **Eligible** (≥ 75%) or **Shortage** (< 75%)
+
+## Technologies Used
+
+| Technology | Purpose |
 |---|---|
-| Language/runtime | Java 17 |
-| Database | MySQL |
-| Database access | JDBC, MySQL Connector/J 26.7.0 |
-| Build/run | Maven |
-| Interface | Console (`Scanner` and standard output) |
+| Java | Core application language; implements all business logic using OOP |
+| JDBC | Connects the Java application to the MySQL database and executes SQL |
+| MySQL | Stores admin, student, subject, academic record, and attendance data |
+| PreparedStatement | Used for parameterized SQL queries instead of string-concatenated SQL |
 
-There is no web framework, browser frontend, or HTTP/REST API.
+> **Unverified:** build tool (plain `javac`, Maven, or Gradle) and the exact JDBC driver version are not confirmed — see [Prerequisites](#prerequisites).
 
 ## Project Structure
 
+> **Unverified placeholder.** The actual repository layout (package names, subfolders, resource locations) could not be confirmed. The list below is the set of Java classes the project report confirms exist, based on Java's convention that each public class lives in a file of the same name. Replace this tree with your real structure.
+
 ```text
-Student_Academic_Portal_JDBC/
-├── database/
-│   └── schema.sql               # Database/table schema and bootstrap admin insert
+Student-Academic-Portal/
 ├── src/
-│   ├── Main.java                # Application entry point
-│   ├── AcademicPortal.java       # Console menus and application workflows
-│   ├── DatabaseInitializer.java # Creates/checks database, tables, and admin
-│   ├── DBConnection.java        # Reads MySQL host/database/user settings
-│   ├── DBConnectionPassword.java # Reads MYSQL_PASSWORD (source fallback exists)
-│   ├── *DAO.java                # JDBC persistence for students/admin/marks/attendance
-│   └── Person.java, Student.java, Admin.java,
-│       Subject.java, AcademicRecord.java, Attendance.java
-├── pom.xml                      # Maven build and dependency configuration
-└── README.md
+│   ├── Main.java                 # Application entry point
+│   ├── AcademicPortal.java       # Main menu, login routing, admin/student flows
+│   ├── Person.java               # Abstract base class (name, phone, email)
+│   ├── Student.java              # Student entity (extends Person)
+│   ├── StudentDAO.java           # JDBC operations for students
+│   ├── Admin.java                # Admin entity (extends Person)
+│   ├── AdminDAO.java             # JDBC operations for admins
+│   ├── Subject.java              # Subject entity
+│   ├── AcademicRecord.java       # Marks, grade, and grade point per subject
+│   ├── AcademicDAO.java          # JDBC operations for academic records
+│   ├── Attendance.java           # Attendance entity and calculations
+│   ├── AttendanceDAO.java        # JDBC operations for attendance
+│   ├── DBConnection.java         # Central JDBC connection factory
+│   └── DatabaseInitializer.java  # Creates the database, tables, and default admin
+├── README.md
+└── ...                            # (build files, if any — see note above)
 ```
 
-`target/` and `bin/`, if present, are generated build output and are not needed as source.
+- **`Main.java`** — contains `main()`, which starts the application via `AcademicPortal`.
+- **`AcademicPortal.java`** — the console menu loop; routes to Admin or Student login and their respective dashboards.
+- **`DBConnection.java`** — builds the JDBC connection using a fixed MySQL URL and a password obtained via a separate `DBConnectionPassword` helper (see [Database](#database)).
+- **`*DAO.java` classes** — one Data Access Object per entity, each performing that entity's CRUD operations through JDBC.
+
+## System Architecture / Workflow
+
+```text
+User
+  ↓
+Main → AcademicPortal.start()
+  ↓
+Main Menu: Admin Login / Student Login / Exit
+  ↓
+Admin Dashboard            Student Dashboard
+  ↓                              ↓
+  DAO classes (Student/Admin/Academic/Attendance)
+  ↓
+  JDBC (PreparedStatement)
+  ↓
+  MySQL database (student_academic_portal)
+```
+
+```mermaid
+flowchart TD
+    A[Main] --> B[AcademicPortal.start]
+    B --> C{Main Menu}
+    C -->|Admin Login| D[Admin Dashboard]
+    C -->|Student Login| E[Student Dashboard]
+    D --> F[DAO Layer]
+    E --> F[DAO Layer]
+    F --> G[JDBC / PreparedStatement]
+    G --> H[(MySQL: student_academic_portal)]
+```
+
+## OOP Concepts Used
+
+- **Abstraction** — `Person` is an abstract base class that `Student` and `Admin` extend.
+- **Inheritance** — `Student` and `Admin` inherit shared fields (name, phone, email) from `Person`.
+- **Encapsulation** — entity fields (e.g. in `Student`, `Admin`, `AcademicRecord`, `Attendance`) are private, accessed through constructors and getters.
+- **Composition** — `AcademicRecord` holds a `Subject` object rather than duplicating subject data.
+- **Classes and Objects** — each entity (Student, Admin, Subject, AcademicRecord, Attendance) is modeled as its own class.
+- **Constructors** — used throughout to validate and initialize object state (e.g. `AcademicRecord` rejects marks outside 0–100, `Attendance` rejects an invalid attended/total combination).
+- **Methods** — behavior such as grade calculation and attendance percentage is implemented as instance methods on the relevant entity.
+
+## Database
+
+- **Database name:** `student_academic_portal`
+- **Tables (confirmed):**
+  - `admins`
+  - `students`
+  - `subjects`
+  - `academic_records`
+  - `attendance`
+- **Relationships:** `academic_records` links to `students` via `roll_no` and to `subjects` via `subject_code` (seen in the report's `getRecords()` query, which joins `academic_records` to `subjects`).
+- **Initialization:** the app initializes itself at startup — `DatabaseInitializer.initialize()` calls `createDatabase()`, `createTables()`, and `createDefaultAdmin()`. No separate `.sql` schema file is referenced in the report.
+- **Connection:** `DBConnection` builds the JDBC URL as `jdbc:mysql://localhost:3306/student_academic_portal?useSSL=false&serverTimezone=Asia/Kolkata`, with the username `root`.
+- **Password handling:** the connection password is retrieved through `DBConnectionPassword.get()` rather than a literal string in `DBConnection`. How that class supplies the password (environment variable, config file, prompt, etc.) is **not shown** in the report — configure your own credentials there rather than committing a real password to source control.
+
+> ⚠️ Do not commit real database credentials. If `DBConnectionPassword` currently returns a hardcoded value anywhere in the source, move it to an environment variable or a local, git-ignored config file.
 
 ## Prerequisites
 
-- JDK 17 or later.
-- Apache Maven.
-- MySQL Server reachable from the application machine.
-- Git to clone the repository (optional if downloading a ZIP).
-- VS Code or another editor is optional.
+- **Java JDK** — version not specified in the project documentation; a recent LTS release (e.g. 17 or 21) should work, but verify against your actual `pom.xml`/`build.gradle`/IDE settings if present.
+- **MySQL Server** — version not specified; any modern MySQL 5.7+/8.x installation should be compatible with the JDBC usage shown.
+- **MySQL Connector/J (JDBC driver)** — required to connect Java to MySQL; not confirmed whether it's bundled in the repo or must be added manually.
+- A way to compile/run Java — plain `javac`/`java`, or an IDE (IntelliJ IDEA, Eclipse, VS Code) — build tooling not confirmed.
 
-Verify installations with:
+## Setup and Installation
 
-```bash
-git --version
-java --version
-mvn --version
-mysql --version
-```
-
-## Installation
-
-Clone the repository and move into the created directory:
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/brithvik8/Student-Acadamic-Portal.git
-cd Student-Acadamic-Portal
+git clone <REPLACE WITH YOUR GITHUB REPOSITORY URL>
+cd <REPLACE WITH YOUR PROJECT FOLDER NAME>
 ```
 
-Alternatively, download the repository ZIP from the GitHub page and extract it. Open a terminal in the project root, the folder containing `pom.xml`, `src/`, and `database/`.
+### 2. Configure MySQL
 
-Compile the project; Maven resolves the declared MySQL Connector/J dependency:
+1. Start your local MySQL server.
+2. The application creates the `student_academic_portal` database and its tables automatically on first run via `DatabaseInitializer` — you do not need to run a manual schema script unless one exists in your repo.
+3. Make sure a MySQL user matching `DBConnection`'s configured username (`root` by default in the report) exists and has permission to create databases/tables, or update `DBConnection` to use your own user.
+4. Set your database password wherever `DBConnectionPassword.get()` reads it from (e.g. an environment variable) — do not hardcode it in source.
+
+### 3. Configure the Java project
+
+> **Unverified placeholder** — the report does not confirm whether this project uses Maven, Gradle, or plain `javac` with a manually managed classpath. Update this section to match your actual setup, for example:
 
 ```bash
-mvn clean compile
+# If using plain javac + the MySQL Connector/J jar on the classpath:
+javac -cp ".:mysql-connector-j-<version>.jar" -d out $(find src -name "*.java")
 ```
-
-## Configuration
-
-`src/DBConnection.java` reads the following environment variables. Unset or blank values use the defaults shown:
-
-| Variable | Default |
-|---|---|
-| `MYSQL_HOST` | `localhost` |
-| `MYSQL_PORT` | `3306` |
-| `MYSQL_DATABASE` | `student_academic_portal` |
-| `MYSQL_USER` | `root` |
-| `MYSQL_PASSWORD` | Supplied through `DBConnectionPassword.get()` |
-
-Set the database password in the shell before running the application. For PowerShell:
-
-```powershell
-$env:MYSQL_PASSWORD = "your-local-mysql-password"
-```
-
-No `.env` file is read, and there is no `.env.example`. `src/DBConnectionPassword.java` currently contains a source-code fallback password. Remove or replace that fallback before sharing/deploying and provide the password through the local environment; do not commit real credentials. The bootstrap administrator password is also defined in source. Change it before using the application with non-demo data. This README intentionally does not reproduce password values.
-
-## Database Setup
-
-The default database is `student_academic_portal`. At startup, `DatabaseInitializer` attempts to create the database and then creates the tables. The MySQL account must have the required database and table privileges. Alternatively, import the checked-in SQL file from the project root:
 
 ```bash
-mysql -u root -p < database/schema.sql
+# If using Maven instead:
+mvn clean install
 ```
 
-The script creates and selects the database, then creates these tables in foreign-key order:
-
-| Table | Purpose |
-|---|---|
-| `admins` | Administrator login and profile fields. |
-| `students` | Student roll number, profile, branch/year, and login password. |
-| `subjects` | Subject code, name, and credits. |
-| `academic_records` | Student/subject marks and semester; unique per student, subject, and semester. |
-| `attendance` | Class counts per student and subject; unique per student and subject. |
-
-Student deletion cascades to the student's academic and attendance rows. Subject deletion is restricted while referenced. The SQL script inserts a bootstrap administrator only if that username is not already present.
-
-Verify the database in the MySQL client:
-
-```sql
-SHOW DATABASES;
-USE student_academic_portal;
-SHOW TABLES;
-DESCRIBE students;
-DESCRIBE academic_records;
-```
-
-## Running the Project
-
-Start MySQL, configure the connection variables if needed, and run from the project root:
+### 4. Run the project
 
 ```bash
+# If using plain javac/java:
+java -cp "out:mysql-connector-j-<version>.jar" Main
+```
+
+```bash
+# If using Maven:
 mvn exec:java
 ```
 
-The Maven exec plugin launches `Main`. There is no browser URL, separate frontend/backend process, or `run.bat` / `run.ps1` script in the project.
-
-## Complete Project Workflow
-
-### 1. Get the project
-
-The repository is [brithvik8/Student-Acadamic-Portal](https://github.com/brithvik8/Student-Acadamic-Portal). Clone it with the commands in [Installation](#installation), or download and extract its ZIP.
-
-### 2. Understand the components
-
-- `src/` contains the console application, domain classes, JDBC connection code, database initializer, and DAO classes.
-- `database/schema.sql` contains the SQL setup and seed administrator insert.
-- `pom.xml` specifies Java 17, MySQL Connector/J, and Maven plugins.
-- There are no frontend/backend subdirectories and no `.env` configuration file.
-
-### 3. Install software and dependencies
-
-Install JDK 17+, Maven, and MySQL Server. Install Git if using clone. Check versions with the commands in [Prerequisites](#prerequisites). From the project root, `mvn clean compile` downloads/resolves the dependencies defined by `pom.xml`; there is no npm install step.
-
-### 4. Start and set up MySQL
-
-Start the MySQL service using the method for your OS/installation. The default server is `localhost:3306`. Either let the application create the database/tables on startup (using an account with sufficient privileges), or import `database/schema.sql` with:
-
-```bash
-mysql -u root -p < database/schema.sql
-```
-
-Then verify with `SHOW TABLES;` and `DESCRIBE students;` as shown above.
-
-### 5. Configure the connection
-
-The application reads `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, and `MYSQL_PASSWORD`; defaults and setup are listed in [Configuration](#configuration). No variables are marked production-safe; passwords are stored in plaintext by this academic implementation, and the JDBC URL disables SSL. Use only a trusted learning environment and remove source-code password fallbacks before sharing.
-
-### 6. Compile and start
-
-With MySQL running and configuration set, execute:
-
-```bash
-mvn clean compile
-mvn exec:java
-```
-
-The application starts in the terminal. No expected backend/frontend URLs or browser steps apply.
-
-### 7. First-time setup checklist
-
-- [ ] Clone the repository or extract its ZIP.
-- [ ] Install JDK 17+, Maven, and MySQL Server.
-- [ ] Start MySQL and configure `MYSQL_*` values as needed.
-- [ ] Ensure the database account can create the database/tables, or import `database/schema.sql`.
-- [ ] Compile with `mvn clean compile`.
-- [ ] Start with `mvn exec:java`.
-- [ ] Log in as an administrator and add a student.
-- [ ] Enter marks and attendance, then sign in as the student to view them.
-
-### 8. Application workflow
-
-```text
-Main
-  ↓
-AcademicPortal.start()
-  ↓
-DatabaseInitializer checks/creates database and tables
-  ↓
-Console login selection
-  ├── Administrator → manage student profiles, marks, and attendance
-  └── Student → view own profile, result, and attendance
-  ↓
-DAO classes execute JDBC queries against MySQL
-```
-
-The result view calculates grade bands, average marks, and credit-weighted CGPA. Attendance status is calculated from class counts, with 75% as the threshold. Deleting a student also removes their dependent academic and attendance rows through foreign-key cascades.
+> Replace the class path, jar name, and main class above with your project's actual values if they differ.
 
 ## Usage
 
-1. Start the program and choose Admin Login or Student Login.
-2. Sign in as an administrator to create student accounts and maintain details, marks, and attendance.
-3. Sign in as a student using the roll number and password assigned when the account was created.
-4. Use the student menu to view profile, academic result, or attendance. Choose `0` to log out or exit the relevant menu.
+1. Start the application (`Main` → `AcademicPortal.start()`).
+2. The app initializes/connects to the MySQL database.
+3. From the main menu, choose **Admin Login**, **Student Login**, or **Exit**.
+4. As Admin: add, update, delete, or search students; manage marks and attendance.
+5. As Student: view profile, academic results, and attendance.
+6. Log out or exit to return to or close the menu.
 
-The program validates student year as 1–4, marks as 0–100, semester as 1–8, and attendance counts so attended classes cannot exceed total classes.
+## Main Classes
 
-## User Roles
-
-| Role | Capabilities |
+| Class | Responsibility |
 |---|---|
-| Administrator | Manage student profiles; enter/update marks and attendance; view results and attendance; view own profile. |
-| Student | View own profile, academic result, and attendance. |
+| `Main` | Application entry point; starts `AcademicPortal` |
+| `AcademicPortal` | Main menu loop; routes Admin/Student login and dashboards |
+| `Person` | Abstract base class holding name, phone, and email |
+| `Student` | Student entity; extends `Person` |
+| `StudentDAO` | CRUD and login operations for students via JDBC |
+| `Admin` | Admin entity; extends `Person` |
+| `AdminDAO` | Login and lookup operations for admins via JDBC |
+| `Subject` | Subject entity (code, name, credits) |
+| `AcademicRecord` | Marks/semester for a subject; calculates grade and grade point |
+| `AcademicDAO` | CRUD operations for academic records via JDBC |
+| `Attendance` | Attendance counts for a subject; calculates percentage and status |
+| `AttendanceDAO` | CRUD operations for attendance via JDBC |
+| `DBConnection` | Builds and returns the JDBC `Connection` |
+| `DatabaseInitializer` | Creates the database, tables, and a default admin on first run |
 
-## API Documentation
+## Important Algorithms / Logic
 
-There is no HTTP/REST API. Application operations are exposed through interactive console menus and internal Java DAO classes.
+- **Grade calculation** — marks are compared against fixed bands (≥90 → A+, ≥80 → A, ≥70 → B, ≥60 → C, ≥50 → D, below 50 → F).
+- **Grade point calculation** — mirrors the grade bands (A+→10, A→9, B→8, C→7, D→6, F→0).
+- **Attendance percentage** — `(Attended Classes / Total Classes) × 100`.
+- **Attendance eligibility** — Eligible if the percentage is 75% or higher, otherwise Shortage.
+- **Student search** — accepts a Roll Number, queries the `students` table, returns the matching student or a "not found" result.
+- **Authentication** — Admin and Student logins each query their respective table by identifier (username or Roll Number) and password, using `PreparedStatement`.
+- **CRUD operations** — each DAO performs insert, search, update, delete, and retrieve through parameterized SQL via JDBC.
 
-## Authentication & Security
+## Screenshots
 
-The application checks administrator username/password or student roll number/password against MySQL records. DAO queries use `PreparedStatement`. Passwords are stored and compared as plain text; there is no password hashing, session/token system, or role authorization beyond the separate menus. The JDBC URL disables SSL (`useSSL=false`), so use this only in a trusted local learning environment. Configure database credentials outside source control and remove the source password fallback before sharing.
+> The project report includes result screenshots, but their file paths inside this repository were not confirmed. Add your actual screenshots here, for example:
+>
+> ```markdown
+> ![Admin dashboard](path/to/screenshot.png)
+> ```
 
-## Future Improvements
+## Security Notes
 
-- Hash account passwords and remove the hard-coded database-password fallback.
-- Require encrypted database connections outside local development.
-- Add automated tests and stronger validation for database and input errors.
-- Move connection settings to a managed configuration mechanism and improve error reporting.
-- Add a graphical or web interface if the project scope expands.
+- The `DBConnection` class does not appear to hardcode the database password as a plain string; it delegates to `DBConnectionPassword.get()`. Verify that this method reads the password from an environment variable or a git-ignored file, not a literal string elsewhere in the codebase.
+- Never commit real database credentials to the repository.
+- SQL queries shown in the report use `PreparedStatement` with bound parameters, which helps prevent SQL injection — keep this pattern for any new queries.
+- Student and admin passwords are stored and compared as plain `String` fields in the report's code; there is no evidence of password hashing. Treat this as a known limitation (see Future Enhancements).
 
-## Troubleshooting
+## Future Enhancements
 
-| Problem | Suggested check |
-|---|---|
-| MySQL connection failure | Confirm MySQL is running and `MYSQL_HOST` / `MYSQL_PORT` point to the server. |
-| Access denied | Verify `MYSQL_USER` and `MYSQL_PASSWORD`; the account needs the required database privileges. |
-| Database or tables missing | Run the application with a user allowed to create them, or import `database/schema.sql`. |
-| Maven dependency resolution fails | Check network access to the configured Maven repository, then retry `mvn clean compile`. |
-| Duplicate roll number or subject code | These are primary keys; use a unique value. |
-| Login fails | Use an existing account. The bootstrap administrator is inserted only if its username is absent; student accounts are created through the admin menu. |
+These are suggestions only — none of the following currently exist in the project:
 
-Node/npm setup, frontend startup, browser URLs, web-server port conflicts, CORS, and frontend/backend connectivity do not apply to this console application.
-
-## Git Workflow for Contributors
-
-Contributor: **Rithvik** — GitHub: [`birthvik8`](https://github.com/birthvik8).
-
-A basic contribution workflow is:
-
-```bash
-git clone https://github.com/brithvik8/Student-Acadamic-Portal.git
-cd Student-Acadamic-Portal
-git checkout -b feature/<feature-name>
-
-# Make and review changes
-
-git add .
-git commit -m "Add <feature-name>"
-git push origin feature/<feature-name>
-```
-
-After pushing, create a Pull Request on GitHub. This is a general workflow and does not imply that the project enforces a particular branch naming policy.
+- Password hashing (e.g. bcrypt) instead of plain-text password comparison
+- A GUI or web-based interface in place of the console menu
+- Externalized configuration (e.g. a `.env` or properties file) for database credentials
+- Role-based access control improvements
+- Exporting results/attendance reports (e.g. to PDF or CSV)
+- Automated tests and CI setup
+- Packaging/deployment instructions (e.g. a build tool, Docker)
 
 ## Contributors
 
-- **Rithvik** — [GitHub: `birthvik8`](https://github.com/birthvik8).
+- [B. Rithvik](https://github.com/brithvik8) (`@brithvik8`)
+- [B. Harsha Vardhan](https://github.com/harsha-1706) (`@harsha-1706`)
+- [Donny Sri Ravi Shankar](https://github.com/donnyravi-alt) (`@donnyravi-alt`)
+- [C. Mayank Sai](https://github.com/25211a05b1-eng) (`@25211a05b1-eng`)
 
+Guided by Dr. T. Subba Reddy, Department of Computer Science and Engineering, B V Raju Institute of Technology.
 
-## 📄 License
+## License
 
 This project is intended primarily for academic and educational purposes.
+
+
