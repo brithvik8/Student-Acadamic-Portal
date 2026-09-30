@@ -1,0 +1,4 @@
+Java Compile Check: PASSED (Compiled with OpenJDK 17 and mysql-connector-j).
+MySQL Service Status: MySQL Server 8.0 is installed and RUNNING on localhost:3306.
+Connectivity Check: Connection reachable; authentication requires setting your MySQL root password in DBConnectionPassword.java or setting the MYSQL_PASSWORD environment variable.
+Scripts: run.bat and run.ps1 provided for 1-click build and execution.
