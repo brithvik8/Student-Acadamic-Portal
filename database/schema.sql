@@ -1,4 +1,3 @@
-
 CREATE DATABASE IF NOT EXISTS student_academic_portal;
 USE student_academic_portal;
 CREATE TABLE IF NOT EXISTS admins (
